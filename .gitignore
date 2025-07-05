@@ -1,0 +1,9 @@
+*.mxproject
+settings
+.vscode
+*.ewt
+*.dep
+*.ewd
+Debug
+settings
+build
