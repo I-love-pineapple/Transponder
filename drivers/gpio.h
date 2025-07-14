@@ -37,6 +37,11 @@ extern "C" {
 /* USER CODE END Private defines */
 
 void MX_GPIO_Init(void);
+uint8_t get_aux_state(void);
+uint8_t get_m0_state(void);
+uint8_t get_m1_state(void);
+void set_m0_state(uint8_t state);
+void set_m1_state(uint8_t state);
 
 /* USER CODE BEGIN Prototypes */
 

@@ -24,6 +24,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "gpio.h"
+
+#define DBG_TAG "usart"
+#define DBG_LVL DBG_LOG
+#include "debug_log.h"
 
 // DMA缓冲区定义
 uint8_t lpuart1_rx_dma_buf[UART_BUF_SIZE];
@@ -75,7 +80,7 @@ void MX_LPUART1_UART_Init(void)
 
   /* USER CODE END LPUART1_Init 1 */
   hlpuart1.Instance = LPUART1;
-  hlpuart1.Init.BaudRate = 115200;
+  hlpuart1.Init.BaudRate = 9600;
   hlpuart1.Init.WordLength = UART_WORDLENGTH_8B;
   hlpuart1.Init.StopBits = UART_STOPBITS_1;
   hlpuart1.Init.Parity = UART_PARITY_NONE;
@@ -467,29 +472,66 @@ uint8_t usart2_to_be_send[UART_BUF_SIZE] = {0};
 
 void debug_func_call(uint8_t *data)
 {
-  char *delim=" \r";
-  char *p;
+    char *delim = " \r";
+    char *p;
 
-  p = strtok((char *)data, delim);
+    p = strtok((char *)data, delim);
 
-  //设置
-  if(strcmp(p, "set") == 0)
-  {
-    p = strtok(NULL, delim);
-    if(strcmp(p, "join") == 0)
+    // 设置
+    if (strcmp(p, "set") == 0)
     {
-        printf("join\r\n");
-        
+        p = strtok(NULL, delim);
+        if (strcmp(p, "m0") == 0)
+        {
+            set_m0_state(0);
+            set_m1_state(0);
+        }
+        else if (strcmp(p, "m1") == 0)
+        {
+            set_m0_state(1);
+            set_m1_state(0);
+        }
+        else if (strcmp(p, "m2") == 0)
+        {
+            set_m0_state(0);
+            set_m1_state(1);
+        }
+        else if (strcmp(p, "m3") == 0)
+        {
+            set_m0_state(1);
+            set_m1_state(1);
+        }
     }
-  }
-  else if(strcmp(p, "reboot") == 0)
-  {
-    HAL_NVIC_SystemReset();
-  }
-  else
-  {
-    printf("command error\r\n");
-  }
+    else if (strcmp(p, "get") == 0)
+    {
+        p = strtok(NULL, delim);
+        if (strcmp(p, "m") == 0)
+        {
+            LOG_I("m0 %d m1 %d", get_m0_state(), get_m1_state());
+        }
+        else if (strcmp(p, "ble") == 0)
+        {
+            uint8_t data[3] = {0xC3, 0xC3, 0xC3};
+            ringbuffer_put(&lpuart1_tx_ringbuf, data, 3);
+        }
+    }
+    else if (strcmp(p, "send") == 0)
+    {
+        p = strtok(NULL, delim);
+        ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t *)p, strlen(p));
+    }
+    else if (strcmp(p, "aux") == 0)
+    {
+        LOG_I("aux %d", get_aux_state());
+    }
+    else if (strcmp(p, "reboot") == 0)
+    {
+        HAL_NVIC_SystemReset();
+    }
+    else
+    {
+        LOG_I("command error");
+    }
 }
 
 /**
@@ -509,11 +551,17 @@ void uart_proc(void)
             lpuart1_parse_cache_len += len;
             // 这里可以添加具体的数据解析逻辑
             // 例如检查是否收到完整的命令（以换行符结尾）
-            if(strstr((const char *)lpuart1_parse_cache, "\r") || 
-               strstr((const char *)lpuart1_parse_cache, "\n"))
+            // if(strstr((const char *)lpuart1_parse_cache, "\r") || 
+            //    strstr((const char *)lpuart1_parse_cache, "\n"))
             {
                 // 处理接收到的命令
                 // 可以在这里添加具体的命令处理逻辑
+                LOG_RAW("BLE:");
+                for(int i = 0; i < lpuart1_parse_cache_len; i++)
+                {
+                    LOG_RAW("%02X ", lpuart1_parse_cache[i]);
+                }
+                LOG_RAW("\r\n");
                 
                 // 清空解析缓存
                 memset(lpuart1_parse_cache, 0, UART_BUF_SIZE);
