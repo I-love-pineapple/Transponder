@@ -501,6 +501,9 @@ void debug_func_call(uint8_t *data)
             set_m0_state(1);
             set_m1_state(1);
         }
+        else{
+            LOG_I("command error");
+        }
     }
     else if (strcmp(p, "get") == 0)
     {
@@ -514,11 +517,34 @@ void debug_func_call(uint8_t *data)
             uint8_t data[3] = {0xC3, 0xC3, 0xC3};
             ringbuffer_put(&lpuart1_tx_ringbuf, data, 3);
         }
+        else{
+            LOG_I("command error");
+        }
     }
     else if (strcmp(p, "send") == 0)
     {
         p = strtok(NULL, delim);
-        ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t *)p, strlen(p));
+        if (strcmp(p, "str") == 0)
+        {
+            p = strtok(NULL, delim);
+            ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t *)p, strlen(p));
+            LOG_I("send str %s", p);
+        }
+        else if (strcmp(p, "hex") == 0)
+        {
+            p = strtok(NULL, delim);
+            uint8_t data[100] = {0};
+            int len = strlen(p);
+            for(int i = 0; i < len; i += 2)
+            {
+                data[i / 2] = strtol(p + i, NULL, 16);
+            }
+            ringbuffer_put(&lpuart1_tx_ringbuf, data, len / 2);
+            LOG_I("send hex %s", p);
+        }
+        else{
+            LOG_I("command error");
+        }
     }
     else if (strcmp(p, "aux") == 0)
     {
