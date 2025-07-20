@@ -2,6 +2,7 @@
 #include "dma.h"
 #include "usart.h"
 #include "gpio.h"
+#include "key.h"
 #include <stdio.h>
 
 #define DBG_TAG "main"
@@ -30,9 +31,46 @@ int main(void)
     LOG_I("编译时间: %s %s", __DATE__, __TIME__);
     LOG_I("系统运行中...");
 
+    /* 初始化按键 */
+    key_config_t key_cfg = {
+        .filter_time = 50,       // 滤波时间50ms
+        .long_press_time = 1000, // 长按时间1000ms
+        .repeat_time = 200       // 重复时间200ms
+    };
+    key_init(&key_cfg);
+    LOG_I("按键驱动初始化完成");
+
     while (1)
     {
         uart_proc();
+        
+        /* 按键处理 */
+        key_process();
+        
+        /* 按键事件检测 */
+        for (int i = 0; i < (int)KEY_MAX; i++) {
+            key_event_t event = key_get_event((key_id_t)i);
+            if (event != KEY_EVENT_NONE) {
+                switch (event) {
+                    case KEY_EVENT_PRESS:
+                        LOG_I("按键%d按下", i + 1);
+                        break;
+                    case KEY_EVENT_RELEASE:
+                        LOG_I("按键%d松开", i + 1);
+                        break;
+                    case KEY_EVENT_LONG_PRESS:
+                        LOG_I("按键%d长按", i + 1);
+                        break;
+                    case KEY_EVENT_REPEAT:
+                        LOG_I("按键%d重复", i + 1);
+                        break;
+                    default:
+                        break;
+                }
+                key_clear_event((key_id_t)i);
+            }
+        }
+        
         HAL_Delay(1);
     }
 }
