@@ -3,6 +3,7 @@
 #include "usart.h"
 #include "gpio.h"
 #include "key.h"
+#include "adc.h"
 #include <stdio.h>
 
 #define DBG_TAG "main"
@@ -40,6 +41,13 @@ int main(void)
     key_init(&key_cfg);
     LOG_I("按键驱动初始化完成");
 
+    /* 初始化ADC */
+    if (adc_init() == 0) {
+        LOG_I("ADC驱动初始化完成");
+    } else {
+        LOG_E("ADC驱动初始化失败");
+    }
+
     while (1)
     {
         uart_proc();
@@ -69,6 +77,21 @@ int main(void)
                 }
                 key_clear_event((key_id_t)i);
             }
+        }
+        
+        /* ADC电压检测 */
+        static uint32_t last_adc_time = 0;
+        uint32_t current_time = HAL_GetTick();
+        
+        if (current_time - last_adc_time >= 1000) { // 每秒读取一次ADC
+            adc_start_conversion();
+            if (adc_is_conversion_complete(100)) {
+                uint16_t raw_value = adc_get_raw_value();
+                uint32_t voltage_mv = adc_get_voltage_mv();
+                float voltage_v = adc_get_voltage_v();
+                LOG_I("ADC: 原始值=%d, 电压=%dmV (%.2fV)", raw_value, voltage_mv, voltage_v);
+            }
+            last_adc_time = current_time;
         }
         
         HAL_Delay(1);
