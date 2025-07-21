@@ -89,7 +89,7 @@ int main(void)
                 uint16_t raw_value = adc_get_raw_value();
                 uint32_t voltage_mv = adc_get_voltage_mv();
                 float voltage_v = adc_get_voltage_v();
-                LOG_I("ADC: 原始值=%d, 电压=%dmV (%.2fV)", raw_value, voltage_mv, voltage_v);
+                //LOG_I("ADC: 原始值=%d, 电压=%dmV (%.2fV)", raw_value, voltage_mv, voltage_v);
             }
             last_adc_time = current_time;
         }
