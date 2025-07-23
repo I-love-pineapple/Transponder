@@ -612,11 +612,15 @@ void debug_func_call(uint8_t *data)
         LOG_I("系统状态:");
         LOG_I("  M0: %d, M1: %d", get_m0_state(), get_m1_state());
         LOG_I("  AUX: %d", get_aux_state());
-        LOG_I("  BLE状态: %d", ble_cmd_ctx.state);
-        if (ble_cmd_ctx.state != BLE_CMD_IDLE) {
-            LOG_I("  执行时间: %dms", HAL_GetTick() - ble_cmd_ctx.start_time);
-            LOG_I("  期望响应长度: %d", ble_cmd_ctx.expected_response_len);
-            LOG_I("  实际响应长度: %d", ble_cmd_ctx.response_len);
+        ble_cmd_state_t ble_state = ble_cmd_ctx.state;
+        LOG_I("  BLE状态: %d", ble_state);
+        if (ble_state != BLE_CMD_IDLE) {
+            uint32_t start_time = ble_cmd_ctx.start_time;
+            uint8_t expected_len = ble_cmd_ctx.expected_response_len;
+            uint8_t response_len = ble_cmd_ctx.response_len;
+            LOG_I("  执行时间: %dms", HAL_GetTick() - start_time);
+            LOG_I("  期望响应长度: %d", expected_len);
+            LOG_I("  实际响应长度: %d", response_len);
         }
     }
     else if (strcmp(p, "reboot") == 0)
@@ -722,9 +726,11 @@ void debug_func_call(uint8_t *data)
         }
         else if (strcmp(p, "status") == 0)
         {
-            LOG_I("BLE命令状态: %d", ble_cmd_ctx.state);
-            if (ble_cmd_ctx.state != BLE_CMD_IDLE) {
-                LOG_I("命令执行时间: %d ms", HAL_GetTick() - ble_cmd_ctx.start_time);
+            ble_cmd_state_t ble_state = ble_cmd_ctx.state;
+            LOG_I("BLE命令状态: %d", ble_state);
+            if (ble_state != BLE_CMD_IDLE) {
+                uint32_t start_time = ble_cmd_ctx.start_time;
+                LOG_I("命令执行时间: %d ms", HAL_GetTick() - start_time);
             }
         }
         else if (strcmp(p, "help") == 0)
@@ -919,7 +925,10 @@ void ble_config_state_machine(void)
             ble_cmd_ctx.cmd_data[1] = 0xC1;
             ble_cmd_ctx.cmd_data[2] = 0xC1;
             ble_cmd_ctx.cmd_len = 3;
-            ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, ble_cmd_ctx.cmd_len);
+            {
+                uint8_t cmd_len = ble_cmd_ctx.cmd_len;
+                ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, cmd_len);
+            }
             ble_cmd_ctx.state = BLE_CMD_WAIT_RESPONSE;
             ble_cmd_ctx.start_time = current_time;
             ble_cmd_ctx.timeout_ms = 1000;
@@ -933,11 +942,17 @@ void ble_config_state_machine(void)
         case BLE_CMD_WRITE_CONFIG:
             // 构造并发送写入配置命令
             ble_cmd_ctx.original_cmd = BLE_CMD_WRITE_CONFIG;
-            ble_cmd_ctx.cmd_data[0] = ble_cmd_ctx.save_to_flash ? 0xC0 : 0xC2;
-            ble_config_to_bytes(ble_cmd_ctx.config_ptr, (uint8_t*)ble_cmd_ctx.cmd_data);
-            ble_cmd_ctx.cmd_data[0] = ble_cmd_ctx.save_to_flash ? 0xC0 : 0xC2; // 重新设置控制字
+            {
+                uint8_t save_to_flash = ble_cmd_ctx.save_to_flash;
+                ble_cmd_ctx.cmd_data[0] = save_to_flash ? 0xC0 : 0xC2;
+                ble_config_to_bytes(ble_cmd_ctx.config_ptr, (uint8_t*)ble_cmd_ctx.cmd_data);
+                ble_cmd_ctx.cmd_data[0] = save_to_flash ? 0xC0 : 0xC2; // 重新设置控制字
+            }
             ble_cmd_ctx.cmd_len = 6;
-            ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, ble_cmd_ctx.cmd_len);
+            {
+                uint8_t cmd_len = ble_cmd_ctx.cmd_len;
+                ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, cmd_len);
+            }
             ble_cmd_ctx.state = BLE_CMD_WAIT_RESPONSE;
             ble_cmd_ctx.start_time = current_time;
             ble_cmd_ctx.timeout_ms = 2000;
@@ -951,7 +966,10 @@ void ble_config_state_machine(void)
             ble_cmd_ctx.cmd_data[1] = 0xC3;
             ble_cmd_ctx.cmd_data[2] = 0xC3;
             ble_cmd_ctx.cmd_len = 3;
-            ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, ble_cmd_ctx.cmd_len);
+            {
+                uint8_t cmd_len = ble_cmd_ctx.cmd_len;
+                ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, cmd_len);
+            }
             ble_cmd_ctx.state = BLE_CMD_WAIT_RESPONSE;
             ble_cmd_ctx.start_time = current_time;
             ble_cmd_ctx.timeout_ms = 1000;
@@ -969,7 +987,10 @@ void ble_config_state_machine(void)
             ble_cmd_ctx.cmd_data[1] = 0xC4;
             ble_cmd_ctx.cmd_data[2] = 0xC4;
             ble_cmd_ctx.cmd_len = 3;
-            ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, ble_cmd_ctx.cmd_len);
+            {
+                uint8_t cmd_len = ble_cmd_ctx.cmd_len;
+                ringbuffer_put(&lpuart1_tx_ringbuf, (uint8_t*)ble_cmd_ctx.cmd_data, cmd_len);
+            }
             ble_cmd_ctx.state = BLE_CMD_WAIT_RESPONSE;
             ble_cmd_ctx.start_time = current_time;
             ble_cmd_ctx.timeout_ms = 3000;
@@ -978,31 +999,39 @@ void ble_config_state_machine(void)
             
         case BLE_CMD_WAIT_RESPONSE:
             // 等待响应或超时
-            if (ble_cmd_ctx.expected_response_len == 0) {
-                // 不期望数据响应，只等待AUX状态或超时
-                if (get_aux_state() == 1) {
-                    // AUX为高电平，命令执行成功
-                    LOG_I("AUX high");
-                    ble_cmd_ctx.result = BLE_CONFIG_SUCCESS;
-                    ble_config_command_complete();
-                } else if (current_time - ble_cmd_ctx.start_time >= ble_cmd_ctx.timeout_ms) {
-                    // 超时
-                    LOG_E("AUX timeout");
-                    ble_cmd_ctx.result = BLE_CONFIG_TIMEOUT;
-                    ble_cmd_ctx.state = BLE_CMD_TIMEOUT;
-                }
-            } else {
-                // 期望数据响应
-                if (ble_cmd_ctx.response_len >= ble_cmd_ctx.expected_response_len) {
-                    // 收到足够的响应数据
-                    LOG_I("got resp: %d", ble_cmd_ctx.response_len);
-                    ble_cmd_ctx.result = BLE_CONFIG_SUCCESS;
-                    ble_config_command_complete();
-                } else if (current_time - ble_cmd_ctx.start_time >= ble_cmd_ctx.timeout_ms) {
-                    // 超时
-                    LOG_E("resp timeout: %d/%d", ble_cmd_ctx.response_len, ble_cmd_ctx.expected_response_len);
-                    ble_cmd_ctx.result = BLE_CONFIG_TIMEOUT;
-                    ble_cmd_ctx.state = BLE_CMD_TIMEOUT;
+            {
+                // 为了避免volatile访问顺序警告，先读取volatile变量到临时变量
+                uint8_t expected_len = ble_cmd_ctx.expected_response_len;
+                uint32_t start_time = ble_cmd_ctx.start_time;
+                uint32_t timeout_ms = ble_cmd_ctx.timeout_ms;
+                uint8_t response_len = ble_cmd_ctx.response_len;
+                
+                if (expected_len == 0) {
+                    // 不期望数据响应，只等待AUX状态或超时
+                    if (get_aux_state() == 1) {
+                        // AUX为高电平，命令执行成功
+                        LOG_I("AUX high");
+                        ble_cmd_ctx.result = BLE_CONFIG_SUCCESS;
+                        ble_config_command_complete();
+                    } else if (current_time - start_time >= timeout_ms) {
+                        // 超时
+                        LOG_E("AUX timeout");
+                        ble_cmd_ctx.result = BLE_CONFIG_TIMEOUT;
+                        ble_cmd_ctx.state = BLE_CMD_TIMEOUT;
+                    }
+                } else {
+                    // 期望数据响应
+                    if (response_len >= expected_len) {
+                        // 收到足够的响应数据
+                        LOG_I("got resp: %d", response_len);
+                        ble_cmd_ctx.result = BLE_CONFIG_SUCCESS;
+                        ble_config_command_complete();
+                    } else if (current_time - start_time >= timeout_ms) {
+                        // 超时
+                        LOG_E("resp timeout: %d/%d", response_len, expected_len);
+                        ble_cmd_ctx.result = BLE_CONFIG_TIMEOUT;
+                        ble_cmd_ctx.state = BLE_CMD_TIMEOUT;
+                    }
                 }
             }
             break;
@@ -1045,39 +1074,47 @@ void ble_config_command_complete(void)
             break;
             
         case BLE_CMD_READ_CONFIG:
-            LOG_I("rd: %d,%d", ble_cmd_ctx.result, ble_cmd_ctx.response_len);
-            if (ble_cmd_ctx.result == BLE_CONFIG_SUCCESS && ble_cmd_ctx.response_len == 6) {
-                // 先打印接收到的原始数据
-                LOG_I("data:");
-                for (int i = 0; i < ble_cmd_ctx.response_len; i++) {
-                    LOG_RAW("%02X ", ble_cmd_ctx.response_data[i]);
-                }
-                LOG_RAW("\r\n");
+            {
+                ble_config_result_t result = ble_cmd_ctx.result;
+                uint8_t response_len = ble_cmd_ctx.response_len;
                 
-                // 检查配置指针
-                if (ble_cmd_ctx.config_ptr == NULL) {
-                    LOG_E("ptr NULL");
-                    break;
-                }
-                
-                if (ble_cmd_ctx.response_data[0] == 0xC0) {
-                    ble_bytes_to_config((const uint8_t*)ble_cmd_ctx.response_data, ble_cmd_ctx.config_ptr);
-                    LOG_I("cfg OK");
-                    LOG_I("tx:%d a:%X%02X b:%d", 
-                          ble_cmd_ctx.config_ptr->retransmit_times,
-                          ble_cmd_ctx.config_ptr->addr_high, 
-                          ble_cmd_ctx.config_ptr->addr_low,
-                          ble_cmd_ctx.config_ptr->uart_baud);
-                    LOG_I("air:%d ch:%d pw:%d fix:%d", 
-                          ble_cmd_ctx.config_ptr->air_rate,
-                          ble_cmd_ctx.config_ptr->channel,
-                          ble_cmd_ctx.config_ptr->tx_power,
-                          ble_cmd_ctx.config_ptr->fixed_trans);
+                LOG_I("rd: %d,%d", result, response_len);
+                if (result == BLE_CONFIG_SUCCESS && response_len == 6) {
+                    // 先打印接收到的原始数据
+                    LOG_I("data:");
+                    for (int i = 0; i < ble_cmd_ctx.response_len; i++) {
+                        LOG_RAW("%02X ", ble_cmd_ctx.response_data[i]);
+                    }
+                    LOG_RAW("\r\n");
+                    
+                    // 检查配置指针
+                    if (ble_cmd_ctx.config_ptr == NULL) {
+                        LOG_E("ptr NULL");
+                        break;
+                    }
+                    
+                    if (ble_cmd_ctx.response_data[0] == 0xC0) {
+                        ble_bytes_to_config((const uint8_t*)ble_cmd_ctx.response_data, ble_cmd_ctx.config_ptr);
+                        ble_config_t cfg = *ble_cmd_ctx.config_ptr;
+                        LOG_I("cfg OK");
+                        LOG_I("tx:%d a:%X%02X b:%d", 
+                              cfg.retransmit_times,
+                              cfg.addr_high, 
+                              cfg.addr_low,
+                              cfg.uart_baud);
+                        LOG_I("air:%d ch:%d pw:%d fix:%d", 
+                              cfg.air_rate,
+                              cfg.channel,
+                              cfg.tx_power,
+                              cfg.fixed_trans);
+                    } else {
+                        LOG_E("bad fmt: %02X", ble_cmd_ctx.response_data[0]);
+                    }
                 } else {
-                    LOG_E("bad fmt: %02X", ble_cmd_ctx.response_data[0]);
+                    ble_config_result_t result = ble_cmd_ctx.result;
+                    uint8_t response_len = ble_cmd_ctx.response_len;
+                    LOG_E("rd fail: %d,%d", result, response_len);
                 }
-            } else {
-                LOG_E("rd fail: %d,%d", ble_cmd_ctx.result, ble_cmd_ctx.response_len);
             }
             break;
             
@@ -1090,22 +1127,29 @@ void ble_config_command_complete(void)
             break;
             
         case BLE_CMD_READ_VERSION:
-            if (ble_cmd_ctx.result == BLE_CONFIG_SUCCESS && ble_cmd_ctx.response_len >= 3) {
-                LOG_I("ver:");
-                for (int i = 0; i < ble_cmd_ctx.response_len; i++) {
-                    LOG_RAW("%02X ", ble_cmd_ctx.response_data[i]);
-                }
-                LOG_RAW("\r\n");
+            {
+                ble_config_result_t result = ble_cmd_ctx.result;
+                uint8_t response_len = ble_cmd_ctx.response_len;
                 
-                // 如果用户提供了缓冲区，复制数据
-                if (ble_cmd_ctx.version_info_ptr && ble_cmd_ctx.version_len_ptr) {
-                    uint8_t copy_len = ble_cmd_ctx.response_len > *ble_cmd_ctx.version_len_ptr ? 
-                                      *ble_cmd_ctx.version_len_ptr : ble_cmd_ctx.response_len;
-                    memcpy(ble_cmd_ctx.version_info_ptr, (const void*)ble_cmd_ctx.response_data, copy_len);
-                    *ble_cmd_ctx.version_len_ptr = copy_len;
+                if (result == BLE_CONFIG_SUCCESS && response_len >= 3) {
+                    LOG_I("ver:");
+                    for (int i = 0; i < ble_cmd_ctx.response_len; i++) {
+                        LOG_RAW("%02X ", ble_cmd_ctx.response_data[i]);
+                    }
+                    LOG_RAW("\r\n");
+                    
+                    // 如果用户提供了缓冲区，复制数据
+                    if (ble_cmd_ctx.version_info_ptr && ble_cmd_ctx.version_len_ptr) {
+                        uint8_t copy_len = response_len > *ble_cmd_ctx.version_len_ptr ? 
+                                          *ble_cmd_ctx.version_len_ptr : response_len;
+                        memcpy(ble_cmd_ctx.version_info_ptr, (const void*)ble_cmd_ctx.response_data, copy_len);
+                        *ble_cmd_ctx.version_len_ptr = copy_len;
+                    }
+                } else {
+                    ble_config_result_t result = ble_cmd_ctx.result;
+                    uint8_t response_len = ble_cmd_ctx.response_len;
+                    LOG_E("ver fail: %d,%d", result, response_len);
                 }
-            } else {
-                LOG_E("ver fail: %d,%d", ble_cmd_ctx.result, ble_cmd_ctx.response_len);
             }
             break;
             
